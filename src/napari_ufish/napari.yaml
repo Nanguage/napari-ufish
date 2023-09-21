@@ -1,0 +1,28 @@
+name: napari-ufish
+display_name: U-FISH
+contributions:
+  commands:
+    - id: napari-ufish.make_sample_data
+      python_name: napari_ufish._sample_data:make_sample_data
+      title: Load sample data from U-FISH
+    - id: napari-ufish.make_qwidget
+      python_name: napari_ufish._widget:ExampleQWidget
+      title: Make example QWidget
+    - id: napari-ufish.make_magic_widget
+      python_name: napari_ufish._widget:example_magic_widget
+      title: Make example magic widget
+    - id: napari-ufish.make_func_widget
+      python_name: napari_ufish._widget:example_function_widget
+      title: Make example function widget
+  sample_data:
+    - command: napari-ufish.make_sample_data
+      display_name: U-FISH
+      key: unique_id.1
+  widgets:
+    - command: napari-ufish.make_qwidget
+      display_name: Example QWidget
+    - command: napari-ufish.make_magic_widget
+      display_name: Example Magic Widget
+    - command: napari-ufish.make_func_widget
+      autogenerate: true
+      display_name: Example Function Widget
