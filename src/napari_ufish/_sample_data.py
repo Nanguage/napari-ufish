@@ -8,7 +8,10 @@ Replace code below according to your needs.
 """
 from __future__ import annotations
 
-import numpy
+from skimage.io import imread
+import os.path as osp
+
+HERE = osp.abspath(osp.dirname(__file__))
 
 
 def make_sample_data():
@@ -18,4 +21,6 @@ def make_sample_data():
     # Check the documentation for more information about the
     # add_image_kwargs
     # https://napari.org/stable/api/napari.Viewer.html#napari.Viewer.add_image
-    return [(numpy.random.rand(512, 512), {})]
+    sample1_path = osp.join(HERE, "sample_data/sample1.tif")
+    sample1 = imread(sample1_path)
+    return [(sample1, {})]
