@@ -11,9 +11,6 @@ contributions:
     - id: napari-ufish.make_magic_widget
       python_name: napari_ufish._widget:example_magic_widget
       title: Make example magic widget
-    - id: napari-ufish.make_func_widget
-      python_name: napari_ufish._widget:example_function_widget
-      title: Make example function widget
   sample_data:
     - command: napari-ufish.make_sample_data
       display_name: U-FISH
@@ -23,6 +20,3 @@ contributions:
       display_name: Example QWidget
     - command: napari-ufish.make_magic_widget
       display_name: Example Magic Widget
-    - command: napari-ufish.make_func_widget
-      autogenerate: true
-      display_name: Example Function Widget
