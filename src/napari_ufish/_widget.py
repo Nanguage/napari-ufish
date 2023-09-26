@@ -25,7 +25,13 @@ class InferenceWidget(QtWidgets.QWidget):
             lambda e: self._update_layer_select())
         self.viewer.layers.events.moved.connect(
             lambda e: self._update_layer_select())
+        self._init_layout()
+        self.ufish = UFish()
+        self.ufish.load_weights()
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.predict_done_signal.connect(self._on_predict_done)
 
+    def _init_layout(self):
         btn = QtWidgets.QPushButton("Run")
         btn.clicked.connect(self._on_run_click)
         self.run_btn = btn
@@ -36,6 +42,12 @@ class InferenceWidget(QtWidgets.QWidget):
         self._update_layer_select()
         self.layer_select.activated.connect(self._update_layer_select)
         select_line.addWidget(self.layer_select)
+
+        weight_file_line = QtWidgets.QHBoxLayout()
+        weight_file_line.addWidget(QtWidgets.QLabel("Weight file(optional):"))
+        self.weight_file_button = QtWidgets.QPushButton("Open")
+        self.weight_file_button.clicked.connect(self._on_weight_file_click)
+        weight_file_line.addWidget(self.weight_file_button)
 
         input_axes_line = QtWidgets.QHBoxLayout()
         input_axes_line.addWidget(QtWidgets.QLabel("Input axes(optional):"))
@@ -57,21 +69,19 @@ class InferenceWidget(QtWidgets.QWidget):
         p_thresh_line.addWidget(QtWidgets.QLabel("p threshold:"))
         self.p_thresh_box = QtWidgets.QDoubleSpinBox()
         self.p_thresh_box.setValue(0.5)
+        self.p_thresh_box.setSingleStep(0.1)
+        self.p_thresh_box.setRange(0.0, 1.0)
         p_thresh_line.addWidget(self.p_thresh_box)
 
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addLayout(select_line)
+        layout.addLayout(weight_file_line)
         layout.addLayout(input_axes_line)
         layout.addLayout(blend_3d_line)
         layout.addLayout(batch_size_line)
         layout.addLayout(p_thresh_line)
         layout.addWidget(btn)
-
-        self.ufish = UFish()
-        self.ufish.load_weights()
-        self.executor = ThreadPoolExecutor(max_workers=1)
-        self.predict_done_signal.connect(self._on_predict_done)
 
     def _on_run_click(self):
         image_layers = [
@@ -88,6 +98,7 @@ class InferenceWidget(QtWidgets.QWidget):
             batch_size = self.batch_size_box.value()
             p_thresh = self.p_thresh_box.value()
             self.run_predict(
+                layer.name,
                 layer.data,
                 axes=input_axes,
                 blend_3d=blend_3d,
@@ -95,24 +106,47 @@ class InferenceWidget(QtWidgets.QWidget):
                 intensity_threshold=p_thresh,
             )
 
-    def run_predict(self, *args, **kwargs):
-        self.run_btn.setText("Running...")
-        self.run_btn.setEnabled(False)
+    def _on_weight_file_click(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "QFileDialog.getOpenFileName()", "",
+            "All Files (*);;Python Files (*.py)", options=options)
+        if file_name:
+            print(file_name)
+        self.ufish.load_weights(file_name)
+
+    def run_predict(self, name, *args, **kwargs):
+        self._toggle_run_btn(False)
 
         def run():
-            spots, enh_img = self.ufish.predict(*args, **kwargs)
-            self.predict_done_signal.emit((spots, enh_img))
+            try:
+                spots, enh_img = self.ufish.predict(*args, **kwargs)
+            except Exception as e:
+                self.predict_done_signal.emit((e, None, None))
+            self.predict_done_signal.emit((name, spots, enh_img))
         self.executor.submit(run)
 
     def _on_predict_done(self, res):
-        spots, enh_img = res
-        self.viewer.add_image(enh_img, name="enhanced")
+        name, spots, enh_img = res
+        if isinstance(name, Exception):
+            self._toggle_run_btn(True)
+            raise name
+        self.viewer.add_image(
+            enh_img, name=f"{name}.enhanced")
         self.viewer.add_points(
-            spots, name="spots",
+            spots, name=f"{name}.spots",
             face_color="blue",
             size=5, opacity=0.5)
-        self.run_btn.setText("Run")
-        self.run_btn.setEnabled(True)
+        self._toggle_run_btn(True)
+
+    def _toggle_run_btn(self, enabled):
+        if enabled:
+            self.run_btn.setText("Run")
+            self.run_btn.setEnabled(True)
+        else:
+            self.run_btn.setText("Running...")
+            self.run_btn.setEnabled(False)
 
     def _update_layer_select(self):
         self.layer_select.clear()
