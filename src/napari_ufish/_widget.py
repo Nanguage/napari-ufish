@@ -40,6 +40,7 @@ class InferenceWidget(QtWidgets.QWidget):
         input_axes_line = QtWidgets.QHBoxLayout()
         input_axes_line.addWidget(QtWidgets.QLabel("Input axes(optional):"))
         self.input_axes = QtWidgets.QLineEdit("")
+        input_axes_line.addWidget(self.input_axes)
 
         blend_3d_line = QtWidgets.QHBoxLayout()
         blend_3d_line.addWidget(QtWidgets.QLabel("Blend 3D:"))
@@ -52,12 +53,19 @@ class InferenceWidget(QtWidgets.QWidget):
         self.batch_size_box.setValue(4)
         batch_size_line.addWidget(self.batch_size_box)
 
+        p_thresh_line = QtWidgets.QHBoxLayout()
+        p_thresh_line.addWidget(QtWidgets.QLabel("p threshold:"))
+        self.p_thresh_box = QtWidgets.QDoubleSpinBox()
+        self.p_thresh_box.setValue(0.5)
+        p_thresh_line.addWidget(self.p_thresh_box)
+
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addLayout(select_line)
         layout.addLayout(input_axes_line)
         layout.addLayout(blend_3d_line)
         layout.addLayout(batch_size_line)
+        layout.addLayout(p_thresh_line)
         layout.addWidget(btn)
 
         self.ufish = UFish()
@@ -78,14 +86,17 @@ class InferenceWidget(QtWidgets.QWidget):
             input_axes = self.input_axes.text() or None
             blend_3d = self.blend_3d_checkbox.isChecked()
             batch_size = self.batch_size_box.value()
+            p_thresh = self.p_thresh_box.value()
             self.run_predict(
                 layer.data,
                 axes=input_axes,
                 blend_3d=blend_3d,
-                batch_size=batch_size
+                batch_size=batch_size,
+                intensity_threshold=p_thresh,
             )
 
     def run_predict(self, *args, **kwargs):
+        self.run_btn.setText("Running...")
         self.run_btn.setEnabled(False)
 
         def run():
@@ -100,10 +111,10 @@ class InferenceWidget(QtWidgets.QWidget):
             spots, name="spots",
             face_color="blue",
             size=5, opacity=0.5)
+        self.run_btn.setText("Run")
         self.run_btn.setEnabled(True)
 
     def _update_layer_select(self):
-        print("update layer select")
         self.layer_select.clear()
         for layer in self.viewer.layers:
             if isinstance(layer, napari.layers.Image):

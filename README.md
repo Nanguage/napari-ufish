@@ -9,6 +9,14 @@
 
 Deep learning-based FISH spot calling method.
 
+## TODO List
+
+- [x] Sample image
+- [ ] Inference interface
+    - [x] Inference parameters
+    - [ ] Load model from path
+- [ ] Training interface
+
 ----------------------------------
 
 This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
@@ -26,8 +34,6 @@ https://napari.org/stable/plugins/index.html
 You can install `napari-ufish` via [pip]:
 
     pip install napari-ufish
-
-
 
 
 ## Contributing
