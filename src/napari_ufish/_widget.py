@@ -6,6 +6,7 @@ see: https://napari.org/stable/plugins/guides.html?#widgets
 
 Replace code below according to your needs.
 """
+import typing as T
 from qtpy import QtWidgets
 from qtpy import QtCore
 from ufish.api import UFish
@@ -73,6 +74,16 @@ class InferenceWidget(QtWidgets.QWidget):
         self.p_thresh_box.setRange(0.0, 1.0)
         p_thresh_line.addWidget(self.p_thresh_box)
 
+        chunking_line = QtWidgets.QHBoxLayout()
+        chunking_line.addWidget(QtWidgets.QLabel("Chunking:"))
+        self.chunking_checkbox = QtWidgets.QCheckBox()
+        chunking_line.addWidget(self.chunking_checkbox)
+
+        chnksize_line = QtWidgets.QHBoxLayout()
+        chnksize_line.addWidget(QtWidgets.QLabel("Chunk size(optional):"))
+        self.chunk_size = QtWidgets.QLineEdit("")
+        chnksize_line.addWidget(self.chunk_size)
+
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addLayout(select_line)
@@ -81,6 +92,8 @@ class InferenceWidget(QtWidgets.QWidget):
         layout.addLayout(blend_3d_line)
         layout.addLayout(batch_size_line)
         layout.addLayout(p_thresh_line)
+        layout.addLayout(chunking_line)
+        layout.addLayout(chnksize_line)
         layout.addWidget(btn)
 
     def _on_run_click(self):
@@ -97,9 +110,15 @@ class InferenceWidget(QtWidgets.QWidget):
             blend_3d = self.blend_3d_checkbox.isChecked()
             batch_size = self.batch_size_box.value()
             p_thresh = self.p_thresh_box.value()
+            chunking = self.chunking_checkbox.isChecked()
+            chunk_size = self.chunk_size.text() or None
+            if isinstance(chunk_size, str):
+                chunk_size = eval(chunk_size)
             self.run_predict(
                 layer.name,
                 layer.data,
+                chunking=chunking,
+                chunk_size=chunk_size,
                 axes=input_axes,
                 blend_3d=blend_3d,
                 batch_size=batch_size,
@@ -116,12 +135,26 @@ class InferenceWidget(QtWidgets.QWidget):
             print(file_name)
         self.ufish.load_weights(file_name)
 
-    def run_predict(self, name, *args, **kwargs):
+    def run_predict(
+            self, name, data,
+            chunking: bool = False,
+            chunk_size: T.Optional[tuple] = None,
+            *args, **kwargs):
         self._toggle_run_btn(False)
+
+        is_mul_scale = 'MultiScaleData' in str(type(data))
+        if isinstance(data, is_mul_scale):
+            data = data[0]
 
         def run():
             try:
-                spots, enh_img = self.ufish.predict(*args, **kwargs)
+                if not chunking:
+                    spots, enh_img = self.ufish.predict(
+                        data, *args, **kwargs)
+                else:
+                    kwargs["chunk_size"] = chunk_size
+                    spots, enh_img = self.ufish.predict_chunks(
+                        data, *args, **kwargs)
             except Exception as e:
                 self.predict_done_signal.emit((e, None, None))
             self.predict_done_signal.emit((name, spots, enh_img))
