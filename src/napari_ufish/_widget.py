@@ -13,6 +13,69 @@ from ufish.api import UFish
 import napari
 from concurrent.futures import ThreadPoolExecutor
 
+huggingface_repo = "https://huggingface.co/GangCaoLab/U-FISH"
+github_repo = "https://github.com/UFISH-Team/U-FISH/"
+napari_plugin_repo = "https://github.com/UFISH-Team/napari-ufish"
+
+
+class HelpDialog(QtWidgets.QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Set the dialog title
+        self.setWindowTitle("Help")
+
+        # Create a text edit widget with the help text
+        self.text_edit = QtWidgets.QTextEdit()
+        self.text_edit.setPlainText(f"""\
+U-FISH is a deep learning based tool for detecting spots in FISH images.
+
+Parameters:
+    weight_file: The weight file for the model.
+        If None, will use the default weight file.
+    input_axes: The axes of the image.
+        For example, 'czxy' for a 4D image,
+        'yx' for a 2D image.
+        If None, will try to infer the axes from the shape.
+    blend_3d: Whether to blend the 3D image.
+        Used only when the image contains a z axis.
+        If True, will blend the 3D enhanced images along
+        the z, y, x axes.
+    p_thresh: The threshold for the probability map.
+        Range from 0 to 1, higher value will result in
+        less spots.
+    batch_size: The batch size for inference.
+        Used only when the image dimension is 3 or higher.
+    chunking: Whether to use chunking for processing.
+        If True, will infer the image chunk by chunk.
+    chunk_size: The chunk size for processing.
+        For example, (1, 512, 512) for a 3D image,
+        (512, 512) for a 2D image.
+        Using 'image' as a dimension will use the whole image
+        as a chunk. For example, (1, 'image', 'image') for a 3D image,
+        ('image', 'image', 'image', 512, 512) for a 5D image.
+        If None, will use the default chunk size.
+
+You can download the pretrained model weights from:
+    {huggingface_repo}
+For more information, please visit:
+    {github_repo}
+    {napari_plugin_repo}
+""")
+        self.text_edit.setReadOnly(True)
+
+        # Create a button box with an OK button
+        button_box = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok)
+        button_box.accepted.connect(self.accept)
+
+        # Add the text edit and button box to the layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.addWidget(self.text_edit)
+        layout.addWidget(button_box)
+        self.setLayout(layout)
+        self.setFixedWidth(600)
+
 
 class InferenceWidget(QtWidgets.QWidget):
     predict_done_signal = QtCore.Signal(object)
@@ -84,6 +147,9 @@ class InferenceWidget(QtWidgets.QWidget):
         self.chunk_size = QtWidgets.QLineEdit("")
         chnksize_line.addWidget(self.chunk_size)
 
+        self.help_button = QtWidgets.QPushButton("Help")
+        self.help_button.clicked.connect(self._show_help_dialog)
+
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         layout.addLayout(select_line)
@@ -94,7 +160,12 @@ class InferenceWidget(QtWidgets.QWidget):
         layout.addLayout(p_thresh_line)
         layout.addLayout(chunking_line)
         layout.addLayout(chnksize_line)
+        layout.addWidget(self.help_button)
         layout.addWidget(btn)
+
+    def _show_help_dialog(self):
+        dialog = HelpDialog(self)
+        dialog.exec_()
 
     def _on_run_click(self):
         image_layers = [
@@ -129,11 +200,12 @@ class InferenceWidget(QtWidgets.QWidget):
         options = QtWidgets.QFileDialog.Options()
         options |= QtWidgets.QFileDialog.DontUseNativeDialog
         file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
-            self, "QFileDialog.getOpenFileName()", "",
-            "All Files (*);;Python Files (*.py)", options=options)
+            self, "Open weight file", "",
+            "All Files (*);;ONNX Files (*.onnx);;PyTorch Files (*.pth)",
+            options=options)
         if file_name:
             print(file_name)
-        self.ufish.load_weights(file_name)
+            self.ufish.load_weights(file_name)
 
     def run_predict(
             self, name, data,
@@ -143,7 +215,7 @@ class InferenceWidget(QtWidgets.QWidget):
         self._toggle_run_btn(False)
 
         is_mul_scale = 'MultiScaleData' in str(type(data))
-        if isinstance(data, is_mul_scale):
+        if is_mul_scale:
             data = data[0]
 
         def run():
