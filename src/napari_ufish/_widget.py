@@ -18,16 +18,8 @@ github_repo = "https://github.com/UFISH-Team/U-FISH/"
 napari_plugin_repo = "https://github.com/UFISH-Team/napari-ufish"
 
 
-class HelpDialog(QtWidgets.QDialog):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # Set the dialog title
-        self.setWindowTitle("Help")
-
-        # Create a text edit widget with the help text
-        self.text_edit = QtWidgets.QTextEdit()
-        self.text_edit.setPlainText(f"""\
+inference_help_text = f"""\
+This is the inference widget for U-FISH napari plugin.
 U-FISH is a deep learning based tool for detecting spots in FISH images.
 
 Parameters:
@@ -61,7 +53,48 @@ You can download the pretrained model weights from:
 For more information, please visit:
     {github_repo}
     {napari_plugin_repo}
-""")
+"""
+
+
+train_widget_help_text = f"""\
+This is the train widget for U-FISH napari plugin.
+U-FISH is a deep learning based tool for detecting spots in FISH images.
+
+Parameters:
+    weight_file(required): The weight file for the model.
+        The PyTorch weight file(.pth) is required.
+        You can download the pretrained model weights from:
+            {huggingface_repo}
+    train_dataset(required): The directory for the training dataset.
+        The directory should contain the images and the corresponding
+        label csv files.
+    valid_dataset(required): The directory for the validation dataset.
+        The directory should contain the images and the corresponding
+        label csv files.
+    model_save_dir(required): The directory for saving the trained model.
+    data_augmentation: Whether to use data augmentation for training.
+    num_epochs: The number of epochs for training.
+    batch_size: The batch size for training.
+    learning_rate: The learning rate for training.
+
+You can download the pretrained model weights from:
+    {huggingface_repo}
+For more information, please visit:
+    {github_repo}
+    {napari_plugin_repo}
+"""
+
+
+class HelpDialog(QtWidgets.QDialog):
+    def __init__(self, text=inference_help_text, parent=None):
+        super().__init__(parent)
+
+        # Set the dialog title
+        self.setWindowTitle("Help")
+
+        # Create a text edit widget with the help text
+        self.text_edit = QtWidgets.QTextEdit()
+        self.text_edit.setPlainText(text)
         self.text_edit.setReadOnly(True)
 
         # Create a button box with an OK button
@@ -164,7 +197,7 @@ class InferenceWidget(QtWidgets.QWidget):
         layout.addWidget(btn)
 
     def _show_help_dialog(self):
-        dialog = HelpDialog(self)
+        dialog = HelpDialog(self, text=inference_help_text)
         dialog.exec_()
 
     def _on_run_click(self):
@@ -262,3 +295,218 @@ class InferenceWidget(QtWidgets.QWidget):
         n = self.layer_select.count()
         if n > 0:
             self.layer_select.setCurrentIndex(n-1)
+
+
+class TrainWidget(QtWidgets.QWidget):
+    done_signal = QtCore.Signal(object)
+
+    def __init__(self, napari_viewer: "napari.Viewer"):
+        super().__init__()
+        self.viewer = napari_viewer
+        self.train_dataset_path = None
+        self.valid_dataset_path = None
+        self.weight_loaded = False
+        self.model_save_dir = None
+        self._init_layout()
+        self.ufish = UFish()
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.done_signal.connect(self._on_train_done)
+
+    def _init_layout(self):
+        layout = QtWidgets.QVBoxLayout()
+        torch_vesion_label = self._check_torch_version()
+        layout.addWidget(torch_vesion_label)
+        layout.addSpacing(1)
+
+        self.weight_file_button = QtWidgets.QPushButton(
+            "Open weight file")
+        self.weight_file_button.clicked.connect(self._on_weight_file_click)
+        self.weight_file_label = QtWidgets.QLabel("None")
+        layout.addWidget(QtWidgets.QLabel("Weight file(required):"))
+        layout.addWidget(self.weight_file_button)
+        layout.addWidget(self.weight_file_label)
+        layout.addSpacing(1)
+
+        self.train_dataset_button = QtWidgets.QPushButton(
+            "Open train directory")
+        self.train_dataset_button.clicked.connect(self._on_open_train_dataset)
+        self.train_dataset_label = QtWidgets.QLabel("None")
+        layout.addWidget(QtWidgets.QLabel("Train dataset(required):"))
+        layout.addWidget(self.train_dataset_button)
+        layout.addWidget(self.train_dataset_label)
+        layout.addSpacing(1)
+
+        self.valid_dataset_button = QtWidgets.QPushButton(
+            "Open validation directory")
+        self.valid_dataset_button.clicked.connect(
+            self._on_open_validation_dataset)
+        self.valid_dataset_label = QtWidgets.QLabel("None")
+        layout.addWidget(QtWidgets.QLabel("Validation dataset(required):"))
+        layout.addWidget(self.valid_dataset_button)
+        layout.addWidget(self.valid_dataset_label)
+        layout.addSpacing(1)
+
+        self.model_save_dir_button = QtWidgets.QPushButton(
+            "Open model save directory")
+        self.model_save_dir_button.clicked.connect(
+            self._on_open_model_save_dir)
+        model_save_dir_line = QtWidgets.QHBoxLayout()
+        model_save_dir_line.addWidget(
+            QtWidgets.QLabel("Open model save directory"))
+        self.model_save_dir_label = QtWidgets.QLabel("None")
+        layout.addWidget(QtWidgets.QLabel("Model save directory(required):"))
+        layout.addWidget(self.model_save_dir_button)
+        layout.addWidget(self.model_save_dir_label)
+        layout.addSpacing(2)
+
+        data_argu_line = QtWidgets.QHBoxLayout()
+        data_argu_line.addWidget(QtWidgets.QLabel("Data augmentation:"))
+        self.data_argu_checkbox = QtWidgets.QCheckBox()
+        data_argu_line.addWidget(self.data_argu_checkbox)
+        layout.addLayout(data_argu_line)
+
+        num_epochs_line = QtWidgets.QHBoxLayout()
+        num_epochs_line.addWidget(QtWidgets.QLabel("Number of epochs:"))
+        self.num_epochs_box = QtWidgets.QSpinBox()
+        self.num_epochs_box.setValue(50)
+        num_epochs_line.addWidget(self.num_epochs_box)
+        layout.addLayout(num_epochs_line)
+
+        batch_size_line = QtWidgets.QHBoxLayout()
+        batch_size_line.addWidget(QtWidgets.QLabel("Batch size:"))
+        self.batch_size_box = QtWidgets.QSpinBox()
+        self.batch_size_box.setValue(8)
+        batch_size_line.addWidget(self.batch_size_box)
+        layout.addLayout(batch_size_line)
+
+        learning_rate_line = QtWidgets.QHBoxLayout()
+        learning_rate_line.addWidget(QtWidgets.QLabel("Learning rate:"))
+        self.learning_rate_box = QtWidgets.QDoubleSpinBox()
+        self.learning_rate_box.setDecimals(8)
+        self.learning_rate_box.setValue(0.0001)
+        self.learning_rate_box.setSingleStep(0.0001)
+        learning_rate_line.addWidget(self.learning_rate_box)
+        layout.addLayout(learning_rate_line)
+        layout.addSpacing(2)
+
+        self.train_button = QtWidgets.QPushButton("Train")
+        self.train_button.setEnabled(False)
+        self.train_button.clicked.connect(self._on_train_click)
+        layout.addWidget(self.train_button)
+        self.run_button = QtWidgets.QPushButton("Run")
+        self.run_button.setEnabled(False)
+        layout.addWidget(self.run_button)
+        self.convert_button = QtWidgets.QPushButton("Convert to ONNX")
+        self.convert_button.setEnabled(False)
+        layout.addWidget(self.convert_button)
+        self.help_button = QtWidgets.QPushButton("Help")
+        self.help_button.clicked.connect(
+            self._on_help_button_click)
+        layout.addWidget(self.help_button)
+
+        self.setLayout(layout)
+
+    def _check_torch_version(self):
+        import torch
+        version = torch.__version__
+        label = QtWidgets.QLabel(f"PyTorch version: {version}")
+        if not torch.cuda.is_available():
+            label.setText(
+                f"PyTorch version: {version}\n"
+                "Training requires PyTorch with CUDA support.\n"
+                "Make sure GPU is available and CUDA is installed."
+            )
+            label.setStyleSheet("color: red")
+            self.weight_file_button.setEnabled(False)
+        return label
+
+    def _on_help_button_click(self):
+        dialog = HelpDialog(self, text=train_widget_help_text)
+        dialog.exec_()
+
+    def _on_weight_file_click(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        file_name, _ = QtWidgets.QFileDialog.getOpenFileName(
+            self, "Open weight file", "",
+            "PyTorch Files (*.pth)",
+            options=options)
+        if file_name:
+            print(file_name)
+            assert file_name.endswith(".pth"),\
+                "Only support PyTorch weights(.pth)"
+            self.ufish.load_weights(file_name)
+            self.weight_loaded = True
+            self.weight_file_label.setText(file_name)
+            self.run_button.setEnabled(True)
+            self.convert_button.setEnabled(True)
+            if self._is_trainable:
+                self.train_button.setEnabled(True)
+
+    def _on_open_train_dataset(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        dir_name = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Open train directory", options=options)
+        if dir_name:
+            print(dir_name)
+            self.train_dataset_label.setText(dir_name)
+            self.train_dataset_path = dir_name
+            if self._is_trainable:
+                self.train_button.setEnabled(True)
+
+    def _on_open_validation_dataset(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        dir_name = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Open validation directory", options=options)
+        if dir_name:
+            print(dir_name)
+            self.valid_dataset_label.setText(dir_name)
+            self.valid_dataset_path = dir_name
+            if self._is_trainable:
+                self.train_button.setEnabled(True)
+
+    def _on_open_model_save_dir(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        dir_name = QtWidgets.QFileDialog.getExistingDirectory(
+            self, "Open model save directory", options=options)
+        if dir_name:
+            print(dir_name)
+            self.model_save_dir_label.setText(dir_name)
+            self.model_save_dir = dir_name
+
+    def _is_trainable(self):
+        return self.train_dataset_path is not None and\
+            self.valid_dataset_path is not None and\
+            self.model_save_dir is not None and\
+            self.weight_loaded
+
+    def _on_train_click(self):
+        self.train_button.setEnabled(False)
+        self.run_button.setEnabled(False)
+        self.convert_button.setEnabled(False)
+
+        def train():
+            try:
+                self.ufish.train(
+                    self.train_dataset_path,
+                    self.valid_dataset_path,
+                    model_save_dir=self.model_save_dir,
+                    data_augmentation=self.data_argu_checkbox.isChecked(),
+                    num_epochs=self.num_epochs_box.value(),
+                    batch_size=self.batch_size_box.value(),
+                    learning_rate=self.learning_rate_box.value(),
+                )
+            except Exception as e:
+                self.done_signal.emit(e)
+            self.done_signal.emit(None)
+        self.executor.submit(train)
+
+    def _on_train_done(self, res):
+        if isinstance(res, Exception):
+            raise res
+        self.train_button.setEnabled(True)
+        self.run_button.setEnabled(True)
+        self.convert_button.setEnabled(True)

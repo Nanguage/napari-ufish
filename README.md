@@ -12,9 +12,10 @@ Deep learning-based FISH spot calling method.
 ## TODO List
 
 - [x] Sample image
-- [ ] Inference interface
+- [x] Inference interface
     - [x] Inference parameters
-    - [ ] Load model from path
+    - [x] Load model from path
+    - [x] Help information dialog
 - [ ] Training interface
 
 ----------------------------------

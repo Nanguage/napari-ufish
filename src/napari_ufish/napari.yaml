@@ -8,10 +8,15 @@ contributions:
     - id: napari-ufish.make_inference_widget
       python_name: napari_ufish._widget:InferenceWidget
       title: Inference
+    - id: napari-ufish.make_train_widget
+      python_name: napari_ufish._widget:TrainWidget
+      title: Train
   sample_data:
     - command: napari-ufish.make_sample_data
       display_name: U-FISH
       key: unique_id.1
   widgets:
     - command: napari-ufish.make_inference_widget
-      display_name: Inference
+      display_name: U-FISH Inference
+    - command: napari-ufish.make_train_widget
+      display_name: U-FISH Train
