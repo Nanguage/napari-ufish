@@ -7,6 +7,8 @@
 [![codecov](https://codecov.io/gh/Nanguage/napari-ufish/branch/main/graph/badge.svg)](https://codecov.io/gh/Nanguage/napari-ufish)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-ufish)](https://napari-hub.org/plugins/napari-ufish)
 
+**Work In Progress**
+
 Deep learning-based FISH spot calling method.
 
 ## TODO List

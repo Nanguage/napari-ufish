@@ -86,7 +86,7 @@ For more information, please visit:
 
 
 class HelpDialog(QtWidgets.QDialog):
-    def __init__(self, text=inference_help_text, parent=None):
+    def __init__(self, parent=None, text=""):
         super().__init__(parent)
 
         # Set the dialog title
@@ -316,7 +316,7 @@ class TrainWidget(QtWidgets.QWidget):
         layout = QtWidgets.QVBoxLayout()
         torch_vesion_label = self._check_torch_version()
         layout.addWidget(torch_vesion_label)
-        layout.addSpacing(1)
+        layout.addSpacing(15)
 
         self.weight_file_button = QtWidgets.QPushButton(
             "Open weight file")
@@ -325,7 +325,7 @@ class TrainWidget(QtWidgets.QWidget):
         layout.addWidget(QtWidgets.QLabel("Weight file(required):"))
         layout.addWidget(self.weight_file_button)
         layout.addWidget(self.weight_file_label)
-        layout.addSpacing(1)
+        layout.addSpacing(10)
 
         self.train_dataset_button = QtWidgets.QPushButton(
             "Open train directory")
@@ -334,7 +334,7 @@ class TrainWidget(QtWidgets.QWidget):
         layout.addWidget(QtWidgets.QLabel("Train dataset(required):"))
         layout.addWidget(self.train_dataset_button)
         layout.addWidget(self.train_dataset_label)
-        layout.addSpacing(1)
+        layout.addSpacing(10)
 
         self.valid_dataset_button = QtWidgets.QPushButton(
             "Open validation directory")
@@ -344,7 +344,7 @@ class TrainWidget(QtWidgets.QWidget):
         layout.addWidget(QtWidgets.QLabel("Validation dataset(required):"))
         layout.addWidget(self.valid_dataset_button)
         layout.addWidget(self.valid_dataset_label)
-        layout.addSpacing(1)
+        layout.addSpacing(10)
 
         self.model_save_dir_button = QtWidgets.QPushButton(
             "Open model save directory")
@@ -357,7 +357,7 @@ class TrainWidget(QtWidgets.QWidget):
         layout.addWidget(QtWidgets.QLabel("Model save directory(required):"))
         layout.addWidget(self.model_save_dir_button)
         layout.addWidget(self.model_save_dir_label)
-        layout.addSpacing(2)
+        layout.addSpacing(15)
 
         data_argu_line = QtWidgets.QHBoxLayout()
         data_argu_line.addWidget(QtWidgets.QLabel("Data augmentation:"))
@@ -387,7 +387,7 @@ class TrainWidget(QtWidgets.QWidget):
         self.learning_rate_box.setSingleStep(0.0001)
         learning_rate_line.addWidget(self.learning_rate_box)
         layout.addLayout(learning_rate_line)
-        layout.addSpacing(2)
+        layout.addSpacing(15)
 
         self.train_button = QtWidgets.QPushButton("Train")
         self.train_button.setEnabled(False)
@@ -396,8 +396,10 @@ class TrainWidget(QtWidgets.QWidget):
         self.run_button = QtWidgets.QPushButton("Run")
         self.run_button.setEnabled(False)
         layout.addWidget(self.run_button)
+        # TODO: implement run
         self.convert_button = QtWidgets.QPushButton("Convert to ONNX")
         self.convert_button.setEnabled(False)
+        # TODO: implement convert to onnx
         layout.addWidget(self.convert_button)
         self.help_button = QtWidgets.QPushButton("Help")
         self.help_button.clicked.connect(
