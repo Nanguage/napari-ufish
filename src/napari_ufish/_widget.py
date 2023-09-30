@@ -312,6 +312,7 @@ class TrainWidget(QtWidgets.QWidget):
         self.model_save_dir = None
         self._init_layout()
         self.ufish = UFish()
+        self.ufish.init_model()
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.train_done_signal.connect(self._on_train_done)
         self.predict_done_signal.connect(self._on_predict_done)
@@ -327,7 +328,7 @@ class TrainWidget(QtWidgets.QWidget):
             "Open weight file")
         self.weight_file_button.clicked.connect(self._on_weight_file_click)
         self.weight_file_label = QtWidgets.QLabel("None")
-        layout.addWidget(QtWidgets.QLabel("Weight file(required):"))
+        layout.addWidget(QtWidgets.QLabel("Pretrained weight file:"))
         layout.addWidget(self.weight_file_button)
         layout.addWidget(self.weight_file_label)
         layout.addSpacing(10)
@@ -373,7 +374,7 @@ class TrainWidget(QtWidgets.QWidget):
         num_epochs_line = QtWidgets.QHBoxLayout()
         num_epochs_line.addWidget(QtWidgets.QLabel("Number of epochs:"))
         self.num_epochs_box = QtWidgets.QSpinBox()
-        self.num_epochs_box.setValue(50)
+        self.num_epochs_box.setValue(10)
         num_epochs_line.addWidget(self.num_epochs_box)
         layout.addLayout(num_epochs_line)
 
@@ -495,8 +496,6 @@ class TrainWidget(QtWidgets.QWidget):
             self.weight_file_label.setText(file_name)
             self.run_button.setEnabled(True)
             self.convert_button.setEnabled(True)
-            if self._is_trainable:
-                self.train_button.setEnabled(True)
 
     def _on_open_train_dataset(self):
         options = QtWidgets.QFileDialog.Options()
@@ -507,7 +506,7 @@ class TrainWidget(QtWidgets.QWidget):
             print(dir_name)
             self.train_dataset_label.setText(dir_name)
             self.train_dataset_path = dir_name
-            if self._is_trainable:
+            if self._is_trainable():
                 self.train_button.setEnabled(True)
 
     def _on_open_validation_dataset(self):
@@ -519,7 +518,7 @@ class TrainWidget(QtWidgets.QWidget):
             print(dir_name)
             self.valid_dataset_label.setText(dir_name)
             self.valid_dataset_path = dir_name
-            if self._is_trainable:
+            if self._is_trainable():
                 self.train_button.setEnabled(True)
 
     def _on_open_model_save_dir(self):
@@ -531,12 +530,13 @@ class TrainWidget(QtWidgets.QWidget):
             print(dir_name)
             self.model_save_dir_label.setText(dir_name)
             self.model_save_dir = dir_name
+            if self._is_trainable():
+                self.train_button.setEnabled(True)
 
     def _is_trainable(self):
         return self.train_dataset_path is not None and\
             self.valid_dataset_path is not None and\
-            self.model_save_dir is not None and\
-            self.weight_loaded
+            self.model_save_dir is not None
 
     def _on_train_click(self):
         self.train_button.setEnabled(False)
@@ -549,10 +549,10 @@ class TrainWidget(QtWidgets.QWidget):
                     self.train_dataset_path,
                     self.valid_dataset_path,
                     model_save_dir=self.model_save_dir,
-                    data_augmentation=self.data_argu_checkbox.isChecked(),
+                    data_argu=self.data_argu_checkbox.isChecked(),
                     num_epochs=self.num_epochs_box.value(),
                     batch_size=self.batch_size_box.value(),
-                    learning_rate=self.learning_rate_box.value(),
+                    lr=self.learning_rate_box.value(),
                 )
             except Exception as e:
                 self.train_done_signal.emit(e)
