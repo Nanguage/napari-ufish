@@ -1,15 +1,19 @@
 # napari-ufish
 
-[![License MIT](https://img.shields.io/pypi/l/napari-ufish.svg?color=green)](https://github.com/Nanguage/napari-ufish/raw/main/LICENSE)
+[![License MIT](https://img.shields.io/pypi/l/napari-ufish.svg?color=green)](https://github.com/UFISH-Team/napari-ufish/raw/main/LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/napari-ufish.svg?color=green)](https://pypi.org/project/napari-ufish)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-ufish.svg?color=green)](https://python.org)
-[![tests](https://github.com/Nanguage/napari-ufish/workflows/tests/badge.svg)](https://github.com/Nanguage/napari-ufish/actions)
+[![tests](https://github.com/UFISH-Team/napari-ufish/workflows/tests/badge.svg)](https://github.com/UFISH-Team/napari-ufish/actions)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-ufish)](https://napari-hub.org/plugins/napari-ufish)
 
-**Work In Progress**
-
 Deep learning-based FISH spot calling method.
-The napari plugin for [U-FISH](https://github.com/UFISH-Team/U-FISH)
+The napari plugin for [U-FISH](https://github.com/UFISH-Team/U-FISH).
+
+## Links
+
++ [U-FISH](https://github.com/UFISH-Team/U-FISH)
++ [U-FISH models](https://huggingface.co/GangCaoLab/U-FISH)
++ [FISH_spots dataset](https://huggingface.co/datasets/GangCaoLab/FISH_spots)
 
 ## TODO List
 
@@ -19,12 +23,6 @@ The napari plugin for [U-FISH](https://github.com/UFISH-Team/U-FISH)
     - [x] Load model from path
     - [x] Help information dialog
 - [x] Training interface
-
-## Links
-
-+ [U-FISH](https://github.com/UFISH-Team/U-FISH)
-+ [U-FISH models](https://huggingface.co/GangCaoLab/U-FISH)
-+ [FISH_spots dataset](https://huggingface.co/datasets/GangCaoLab/FISH_spots)
 
 ----------------------------------
 
