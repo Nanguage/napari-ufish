@@ -4,12 +4,12 @@
 [![PyPI](https://img.shields.io/pypi/v/napari-ufish.svg?color=green)](https://pypi.org/project/napari-ufish)
 [![Python Version](https://img.shields.io/pypi/pyversions/napari-ufish.svg?color=green)](https://python.org)
 [![tests](https://github.com/Nanguage/napari-ufish/workflows/tests/badge.svg)](https://github.com/Nanguage/napari-ufish/actions)
-[![codecov](https://codecov.io/gh/Nanguage/napari-ufish/branch/main/graph/badge.svg)](https://codecov.io/gh/Nanguage/napari-ufish)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-ufish)](https://napari-hub.org/plugins/napari-ufish)
 
 **Work In Progress**
 
 Deep learning-based FISH spot calling method.
+The napari plugin for [U-FISH](https://github.com/UFISH-Team/U-FISH)
 
 ## TODO List
 
@@ -18,7 +18,13 @@ Deep learning-based FISH spot calling method.
     - [x] Inference parameters
     - [x] Load model from path
     - [x] Help information dialog
-- [ ] Training interface
+- [x] Training interface
+
+## Links
+
++ [U-FISH](https://github.com/UFISH-Team/U-FISH)
++ [U-FISH models](https://huggingface.co/GangCaoLab/U-FISH)
++ [FISH_spots dataset](https://huggingface.co/datasets/GangCaoLab/FISH_spots)
 
 ----------------------------------
 
