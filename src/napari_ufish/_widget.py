@@ -11,6 +11,7 @@ from qtpy import QtWidgets
 from qtpy import QtCore
 from ufish.api import UFish
 import napari
+from napari.layers import Image
 from concurrent.futures import ThreadPoolExecutor
 
 huggingface_repo = "https://huggingface.co/GangCaoLab/U-FISH"
@@ -298,7 +299,9 @@ class InferenceWidget(QtWidgets.QWidget):
 
 
 class TrainWidget(QtWidgets.QWidget):
-    done_signal = QtCore.Signal(object)
+    train_done_signal = QtCore.Signal(object)
+    predict_done_signal = QtCore.Signal(object)
+    convert_done_signal = QtCore.Signal(object)
 
     def __init__(self, napari_viewer: "napari.Viewer"):
         super().__init__()
@@ -310,7 +313,9 @@ class TrainWidget(QtWidgets.QWidget):
         self._init_layout()
         self.ufish = UFish()
         self.executor = ThreadPoolExecutor(max_workers=1)
-        self.done_signal.connect(self._on_train_done)
+        self.train_done_signal.connect(self._on_train_done)
+        self.predict_done_signal.connect(self._on_predict_done)
+        self.convert_done_signal.connect(self._on_convert_done)
 
     def _init_layout(self):
         layout = QtWidgets.QVBoxLayout()
@@ -395,11 +400,11 @@ class TrainWidget(QtWidgets.QWidget):
         layout.addWidget(self.train_button)
         self.run_button = QtWidgets.QPushButton("Run")
         self.run_button.setEnabled(False)
+        self.run_button.clicked.connect(self._on_run_click)
         layout.addWidget(self.run_button)
-        # TODO: implement run
         self.convert_button = QtWidgets.QPushButton("Convert to ONNX")
         self.convert_button.setEnabled(False)
-        # TODO: implement convert to onnx
+        self.convert_button.clicked.connect(self._on_convert_click)
         layout.addWidget(self.convert_button)
         self.help_button = QtWidgets.QPushButton("Help")
         self.help_button.clicked.connect(
@@ -415,12 +420,60 @@ class TrainWidget(QtWidgets.QWidget):
         if not torch.cuda.is_available():
             label.setText(
                 f"PyTorch version: {version}\n"
-                "Training requires PyTorch with CUDA support.\n"
-                "Make sure GPU is available and CUDA is installed."
+                "Warning: PyTorch is not installed with CUDA support.\n"
+                "Training will be very slow."
             )
             label.setStyleSheet("color: red")
-            self.weight_file_button.setEnabled(False)
         return label
+
+    def _on_run_click(self):
+        selected_layers = self.viewer.layers.selection
+        for layer in selected_layers:
+            if isinstance(layer, Image):
+                self.run_button.setEnabled(False)
+
+                def run():
+                    data = layer.data
+                    try:
+                        df, enh = self.ufish.predict(data)
+                        self.predict_done_signal.emit((df, enh))
+                    except Exception as e:
+                        self.predict_done_signal.emit(e)
+                self.executor.submit(run)
+
+    def _on_predict_done(self, res):
+        self.run_button.setEnabled(True)
+        if isinstance(res, Exception):
+            raise res
+        df, enh = res
+        self.viewer.add_image(enh, name="enhanced")
+        self.viewer.add_points(
+            df, name="spots",
+            face_color="blue",
+            size=5, opacity=0.5)
+
+    def _on_convert_click(self):
+        options = QtWidgets.QFileDialog.Options()
+        options |= QtWidgets.QFileDialog.DontUseNativeDialog
+        out_path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save ONNX file", "",
+            "ONNX Files (*.onnx)",
+            options=options)
+        if out_path:
+            self.convert_button.setEnabled(False)
+
+            def run():
+                try:
+                    self.ufish.convert_to_onnx(out_path)
+                    self.convert_done_signal.emit(None)
+                except Exception as e:
+                    self.convert_done_signal.emit(e)
+            self.executor.submit(run)
+
+    def _on_convert_done(self, res):
+        self.convert_button.setEnabled(True)
+        if isinstance(res, Exception):
+            raise res
 
     def _on_help_button_click(self):
         dialog = HelpDialog(self, text=train_widget_help_text)
@@ -502,8 +555,8 @@ class TrainWidget(QtWidgets.QWidget):
                     learning_rate=self.learning_rate_box.value(),
                 )
             except Exception as e:
-                self.done_signal.emit(e)
-            self.done_signal.emit(None)
+                self.train_done_signal.emit(e)
+            self.train_done_signal.emit(None)
         self.executor.submit(train)
 
     def _on_train_done(self, res):
