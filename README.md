@@ -12,6 +12,7 @@ The napari plugin for [U-FISH](https://github.com/UFISH-Team/U-FISH).
 ## Links
 
 + [U-FISH](https://github.com/UFISH-Team/U-FISH)
++ [U-FISH Web](https://github.com/UFISH-Team/UFISH-Team.github.io)
 + [U-FISH models](https://huggingface.co/GangCaoLab/U-FISH)
 + [FISH_spots dataset](https://huggingface.co/datasets/GangCaoLab/FISH_spots)
 
